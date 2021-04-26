@@ -105,12 +105,12 @@ func Provider() *schema.Provider {
 				Optional: true,
 				Type:     schema.TypeString,
 			},
-			"alb_section": &schema.Schema{
+			"section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
 				Default:  "default",
 			},
-			"alb": &schema.Schema{
+			"auth": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("property"),
@@ -126,12 +126,12 @@ func Provider() *schema.Provider {
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	ALBConfig, ALBErr := getConfigALBService(d)
-	if ALBErr != nil {
+	config, err := getConfig(d)
+	if err != nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
-	return ALBConfig, nil
+	return config, nil
 }
 
 type resourceData interface {
@@ -143,30 +143,31 @@ type set interface {
 	List() []interface{}
 }
 
-func getConfigALBService(d resourceData) (*edgegrid.Config, error) {
-	var ALBConfig edgegrid.Config
+func getConfig(d resourceData) (*edgegrid.Config, error) {
+	var config edgegrid.Config
 	var err error
-	if _, ok := d.GetOk("alb"); ok {
-		config := d.Get("alb").(set).List()[0].(map[string]interface{})
+	if _, ok := d.GetOk("auth"); ok {
+		attributes := d.Get("auth").(set).List()[0].(map[string]interface{})
 
-		ALBConfig = edgegrid.Config{
-			Host:         config["host"].(string),
-			AccessToken:  config["access_token"].(string),
-			ClientToken:  config["client_token"].(string),
-			ClientSecret: config["client_secret"].(string),
-			MaxBody:      config["max_body"].(int),
+		config = edgegrid.Config{
+			Host:         attributes["host"].(string),
+			AccessToken:  attributes["access_token"].(string),
+			ClientToken:  attributes["client_token"].(string),
+			ClientSecret: attributes["client_secret"].(string),
+			MaxBody:      attributes["max_body"].(int),
 		}
 
-		return &ALBConfig, nil
+		return &config, nil
 	}
 
+	// default
 	edgerc := d.Get("edgerc").(string)
-	section := d.Get("alb_section").(string)
-	ALBConfig, err = edgegrid.Init(edgerc, section)
+	section := d.Get("section").(string)
+	config, err = edgegrid.Init(edgerc, section)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ALBConfig, nil
+	return &config, nil
 }
 
