@@ -1,17 +1,14 @@
 package iancass
 
-
 import (
 	"errors"
 	"fmt"
-//	"log"
+	//	"log"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"os"
 	"strings"
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
-
-
 )
 
 const (
@@ -116,10 +113,9 @@ func Provider() *schema.Provider {
 				Elem:     getConfigOptions("property"),
 			},
 		},
-		DataSourcesMap: map[string]*schema.Resource{
-		},
+		DataSourcesMap: map[string]*schema.Resource{},
 		ResourcesMap: map[string]*schema.Resource{
-			"iancass_alb_activation":     resourceALBActivation(),
+			"iancass_alb_activation": resourceALBActivation(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
@@ -170,4 +166,3 @@ func getConfig(d resourceData) (*edgegrid.Config, error) {
 
 	return &config, nil
 }
-
