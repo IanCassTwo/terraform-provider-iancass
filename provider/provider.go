@@ -1,12 +1,14 @@
-package iancass
+package provider
 
 import (
 	"errors"
 	"fmt"
-	//	"log"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/IanCassTwo/terraform-provider-iancass/api/cps"
+	"github.com/IanCassTwo/terraform-provider-iancass/api/siteshield"
+	"github.com/IanCassTwo/terraform-provider-iancass/api/firewallrules"
 	"os"
 	"strings"
 )
@@ -15,8 +17,8 @@ const (
 	Version = "0.0.1"
 )
 
-type Config struct {
-}
+//type Config struct {
+//}
 
 func getConfigOptions(section string) *schema.Resource {
 	section = strings.ToUpper(section)
@@ -102,7 +104,7 @@ func Provider() *schema.Provider {
 				Optional: true,
 				Type:     schema.TypeString,
 			},
-			"section": &schema.Schema{
+			"config_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
 				Default:  "default",
@@ -113,21 +115,32 @@ func Provider() *schema.Provider {
 				Elem:     getConfigOptions("property"),
 			},
 		},
-		DataSourcesMap: map[string]*schema.Resource{},
+		DataSourcesMap: map[string]*schema.Resource{
+			"data_iancass_siteshield": dataSourceAkamaiSiteShield(),
+		},
 		ResourcesMap: map[string]*schema.Resource{
 			"iancass_alb_activation": resourceALBActivation(),
+			"iancass_firewall_rules": resourceFirewallRule(),
+			"iancass_cps_third_party_certificate": resourceCPSThirdPartyCertificate(),
+			"iancass_cps_third_party_enrollment": resourceCPSThirdPartyEnrollment(),
+			"iancass_cps_dv_enrollment": resourceCPSDVEnrollment(),
+			"iancass_cps_dv_validation": resourceCPSDVValidation(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
 }
 
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-	config, err := getConfig(d)
+
+	edgegridconfig, err := getConfig(d)
 	if err != nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
+	cps.Init(*edgegridconfig)
+	firewallrules.Init(*edgegridconfig)
+	siteshield.Init(*edgegridconfig)
 
-	return config, nil
+	return edgegridconfig, nil
 }
 
 type resourceData interface {
@@ -158,7 +171,7 @@ func getConfig(d resourceData) (*edgegrid.Config, error) {
 
 	// default
 	edgerc := d.Get("edgerc").(string)
-	section := d.Get("section").(string)
+	section := d.Get("config_section").(string)
 	config, err = edgegrid.Init(edgerc, section)
 	if err != nil {
 		return nil, err
